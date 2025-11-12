@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Login - Bharat's Wedding Management</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .auth-container { max-width: 400px; margin: 50px auto; }
+    .role-selector { margin-bottom: 20px; }
+    .role-selector label { font-weight: bold; display: block; margin-bottom: 10px; }
+    .role-selector select { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ddd; font-size: 16px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { font-weight: bold; display: block; margin-bottom: 5px; }
+    .form-group input { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ddd; font-size: 14px; box-sizing: border-box; }
+    .form-group input:focus { outline: none; border-color: #667eea; }
+    .btn-group { display: flex; gap: 10px; }
+    .btn-group button { flex: 1; padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    .btn-login { background: #667eea; color: white; }
+    .btn-login:hover { background: #5568d3; }
+    .btn-signup { background: #48bb78; color: white; }
+    .btn-signup:hover { background: #38a169; }
+    .error-msg { color: red; margin-top: 10px; font-size: 14px; }
+    .success-msg { color: green; margin-top: 10px; font-size: 14px; }
+    .demo-creds { margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px; font-size: 12px; }
+    .demo-creds strong { display: block; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>💍 Bharat's Wedding Management</h1>
+  </header>
+
+  <section class="auth-container">
+    <div class="card">
+      <h2 style="text-align: center;">Login / Sign Up</h2>
+      
+      <!-- Role Selector -->
+      <div class="role-selector">
+        <label for="userRole">Select Your Role:</label>
+        <select id="userRole" onchange="updateFormLabel()">
+          <option value="user">👤 User</option>
+          <option value="member">💼 Member</option>
+          <option value="admin">👨‍💼 Admin</option>
+        </select>
+      </div>
+
+      <!-- Login Form -->
+      <div id="loginSection">
+        <h3 style="text-align: center;">Login</h3>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginEmail">Email:</label>
+            <input type="email" id="loginEmail" required>
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password:</label>
+            <input type="password" id="loginPassword" required>
+          </div>
+          <div class="btn-group">
+            <button type="submit" class="btn-login">Login</button>
+            <button type="button" class="btn-signup" onclick="toggleToSignUp()">Sign Up</button>
+          </div>
+          <div id="loginError" class="error-msg"></div>
+        </form>
+      </div>
+
+      <!-- Sign Up Form (Hidden by default) -->
+      <div id="signupSection" style="display: none;">
+        <h3 style="text-align: center;">Create Account</h3>
+        <form id="signupForm">
+          <div class="form-group">
+            <label for="signupName">Full Name:</label>
+            <input type="text" id="signupName" required>
+          </div>
+          <div class="form-group">
+            <label for="signupEmail">Email:</label>
+            <input type="email" id="signupEmail" required>
+          </div>
+          <div class="form-group">
+            <label for="signupPassword">Password:</label>
+            <input type="password" id="signupPassword" required>
+          </div>
+          <div class="form-group" id="signupSalaryGroup" style="display:none;">
+            <label for="signupSalary">Desired Salary (monthly ₹):</label>
+            <input type="number" id="signupSalary" min="0" placeholder="e.g. 20000">
+          </div>
+          <div class="btn-group">
+            <button type="submit" class="btn-signup">Sign Up</button>
+            <button type="button" class="btn-login" onclick="toggleToLogin()">Back to Login</button>
+          </div>
+          <div id="signupError" class="error-msg"></div>
+          <div id="signupSuccess" class="success-msg"></div>
+        </form>
+      </div>
+
+      <!-- Demo Credentials -->
+      <div class="demo-creds">
+        <strong>📋 Demo Credentials:</strong>
+        User: user1@example.com / user123<br>
+        Admin: admin@example.com / admin123
+      </div>
+    </div>
+  </section>
+
+  <script src="js/db.js"></script>
+  <script>
+    // NO AUTO-LOGIN - Manual login only
+    
+    let currentRole = 'user';
+
+    function updateFormLabel() {
+      currentRole = document.getElementById('userRole').value;
+      const salaryGroup = document.getElementById('signupSalaryGroup');
+      if (salaryGroup) salaryGroup.style.display = (currentRole === 'member') ? 'block' : 'none';
+    }
+
+    // Initialize role on load
+    document.addEventListener('DOMContentLoaded', function(){
+      updateFormLabel();
+    });
+
+    function toggleToSignUp() {
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('signupSection').style.display = 'block';
+      document.getElementById('loginError').textContent = '';
+      document.getElementById('signupError').textContent = '';
+      document.getElementById('signupSuccess').textContent = '';
+    }
+
+    function toggleToLogin() {
+      document.getElementById('loginSection').style.display = 'block';
+      document.getElementById('signupSection').style.display = 'none';
+      document.getElementById('loginError').textContent = '';
+      document.getElementById('signupError').textContent = '';
+      document.getElementById('signupSuccess').textContent = '';
+    }
+
+    // Login Handler
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const role = currentRole;
+
+      const res = DB.loginUser({ email, password });
+      if (res.error) {
+        document.getElementById('loginError').textContent = res.error;
+        return;
+      }
+
+      // Check if role matches
+      if (res.user.role !== role) {
+        document.getElementById('loginError').textContent = `This email is registered as a ${res.user.role}, not a ${role}`;
+        // Do not auto-logout the existing session. Require manual logout.
+        return;
+      }
+
+      // Redirect to appropriate dashboard
+      if (role === 'admin') {
+        window.location.href = 'admin.html';
+      } else {
+        window.location.href = 'index.html';
+      }
+    });
+
+    // Sign Up Handler
+    document.getElementById('signupForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('signupName').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const role = currentRole;
+
+      if (!name || !email || !password) {
+        document.getElementById('signupError').textContent = 'All fields are required';
+        return;
+      }
+
+      // If member, include requestedSalary
+      const requestedSalary = (role === 'member') ? (parseInt(document.getElementById('signupSalary').value) || 0) : undefined;
+      const res = DB.registerUser({ name, email, password, role, requestedSalary });
+      if (res.error) {
+        document.getElementById('signupError').textContent = res.error;
+        return;
+      }
+
+      if (role === 'member') {
+        // Members should wait for admin approval
+        document.getElementById('signupSuccess').textContent = 'Account created. Waiting for admin approval.';
+        document.getElementById('signupForm').reset();
+        // keep on signup screen
+      } else {
+        // Auto-login regular users/admins after registration
+        document.getElementById('signupSuccess').textContent = 'Account created successfully! Logging in...';
+        setTimeout(() => {
+          if (role === 'admin') {
+            window.location.href = 'admin.html';
+          } else {
+            window.location.href = 'index.html';
+          }
+        }, 1200);
+      }
+    });
+  </script>
+</body>
+</html>
+
+1. Login: http://localhost:8000/login.html
+   - Role: User
+   - Email: user1@example.com
+   - Password: user123
+
+2. Open: http://localhost:8000/booking.html
+
+3. Press F12 (DevTools) → Console tab
+
+4. Copy ALL console output starting with [initBooking]
+
+1. Fill in:
+   - Bride: Test
+   - Groom: User  
+   - Mobile: 9999999999
+
+2. Click "+ Add Another Event"
+
+3. Does new event block appear? YES / NO
+
+4. Any red errors in console?

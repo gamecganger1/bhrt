@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Register - Bharat's Wedding Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Register Admin</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="admin-login.html">Login</a>
+    </nav>
+  </header>
+
+  <section>
+    <form id="adminRegisterForm">
+      <label>Name</label>
+      <input type="text" id="name" required>
+      <label>Email</label>
+      <input type="email" id="email" required>
+      <label>Password</label>
+      <input type="password" id="password" required>
+      <button type="submit">Register Admin</button>
+    </form>
+    <div id="result"></div>
+  </section>
+
+  <script src="js/db.js"></script>
+  <script>
+    document.getElementById('adminRegisterForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const res = DB.registerUser({ name, email, password, role: 'admin' });
+      if (res.error) {
+        document.getElementById('result').textContent = res.error;
+      } else {
+        document.getElementById('result').innerHTML = 'Admin registered. <a href="admin-login.html">Login</a>';
+        document.getElementById('adminRegisterForm').reset();
+      }
+    });
+  </script>
+</body>
+</html>

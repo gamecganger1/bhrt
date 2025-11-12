@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Payment - Bharat's Wedding Management</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .payment-container { max-width: 600px; margin: 20px auto; }
+    .booking-summary { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    .booking-summary h3 { margin: 0 0 15px 0; color: #667eea; }
+    .booking-detail { display: flex; justify-content: space-between; margin-bottom: 10px; padding: 10px 0; border-bottom: 1px solid #ddd; }
+    .booking-detail label { font-weight: bold; }
+    .event-list { background: #fff3e0; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+    .event-item { padding: 8px 0; border-bottom: 1px solid #ffe0b2; }
+    .event-item:last-child { border-bottom: none; }
+    .total-amount { font-size: 24px; font-weight: bold; color: #667eea; text-align: right; margin-top: 15px; }
+    .payment-form { background: white; padding: 20px; border-radius: 8px; border: 2px solid #667eea; }
+    .payment-form h3 { color: #667eea; margin-top: 0; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+    .btn-pay { width: 100%; padding: 15px; background: #48bb78; color: white; border: none; border-radius: 5px; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
+    .btn-pay:hover { background: #38a169; }
+    .btn-back { width: 100%; padding: 10px; background: #999; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; }
+    .btn-back:hover { background: #777; }
+    .wallet-info { background: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 14px; }
+    .error-msg { color: red; margin-top: 10px; }
+    .success-msg { color: green; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Complete Your Booking Payment</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="booking.html">New Booking</a>
+      <a href="#" onclick="pageLogout(); return false;" style="color: red; font-weight: bold; margin-left: auto;">Logout</a>
+    </nav>
+  </header>
+
+  <section class="payment-container">
+    <!-- Booking Summary -->
+    <div class="card booking-summary">
+      <h3>Booking Summary</h3>
+      <div class="booking-detail">
+        <label>Couple Names:</label>
+        <span id="coupleNames">-</span>
+      </div>
+      <div class="booking-detail">
+        <label>Mobile:</label>
+        <span id="bookingMobile">-</span>
+      </div>
+      <div class="event-list" id="eventsList"></div>
+      <div class="total-amount">
+        Total Budget: <span id="totalAmount">₹0</span>
+      </div>
+    </div>
+
+    <!-- Payment Method -->
+    <div class="card payment-form">
+      <button type="button" class="btn-back" onclick="goBackToBooking()">← Back to Booking</button>
+      
+      <h3>Payment Details</h3>
+      
+      <div class="wallet-info" id="walletInfo"></div>
+
+      <div class="form-group">
+        <label>Payment Method:</label>
+        <select id="paymentMethod" onchange="updatePaymentMethod()">
+          <option value="wallet">💳 Pay from Wallet</option>
+          <option value="add-and-pay">💰 Add Money & Pay</option>
+        </select>
+      </div>
+
+      <!-- Pay from Wallet -->
+      <div id="walletPayment">
+        <div class="form-group">
+          <label>Your Wallet Balance:</label>
+          <input type="text" id="walletBalance" readonly style="background: #f0f0f0;">
+        </div>
+        <button type="button" class="btn-pay" onclick="payFromWallet()">💳 Pay from Wallet</button>
+      </div>
+
+      <!-- Add Money & Pay -->
+      <div id="addMoneyPayment" style="display: none;">
+        <div class="form-group">
+          <label>Amount to Add (₹):</label>
+          <input type="number" id="addAmount" min="1" value="">
+          <small id="addAmountHint" style="color: #999;"></small>
+        </div>
+        <button type="button" class="btn-pay" onclick="addMoneyAndPay()">➕ Add Money & Pay</button>
+      </div>
+
+      <div id="paymentMessage"></div>
+    </div>
+  </section>
+
+  <script src="js/db.js"></script>
+  <script>
+    // Check authentication
+    const cur = DB.getCurrentUser();
+    if (!cur) {
+      window.location.href = 'login.html';
+    }
+
+    // Get current booking
+    const booking = JSON.parse(localStorage.getItem('currentBooking')) || null;
+    if (!booking) {
+      window.location.href = 'booking.html';
+    }
+
+    // Get user info
+    const users = DB.getAllUsers();
+    const user = users.find(u => String(u.id) === String(cur.id));
+    if (!user) {
+      window.location.href = 'login.html';
+    }
+
+    // Calculate total budget based on number of events
+    // Default: 50,000 per event as base cost
+    const costPerEvent = 50000;
+    const totalBudget = booking.events.length * costPerEvent;
+
+    // Display booking summary
+    document.getElementById('coupleNames').textContent = `${booking.bride} & ${booking.groom}`;
+    document.getElementById('bookingMobile').textContent = booking.mobile;
+    document.getElementById('totalAmount').textContent = `₹${totalBudget.toLocaleString()}`;
+
+    // Display events
+    const eventsHTML = booking.events.map((evt, idx) => `
+      <div class="event-item">
+        <strong>${evt.functionType}</strong> - ${evt.destination} on ${new Date(evt.date).toLocaleDateString()} 
+        <br><span style="color: #999;">Cost: ₹${costPerEvent.toLocaleString()}</span>
+      </div>
+    `).join('');
+    document.getElementById('eventsList').innerHTML = eventsHTML;
+
+    // Display wallet info
+    document.getElementById('walletBalance').value = `₹${(user.wallet || 0).toLocaleString()}`;
+    document.getElementById('walletInfo').innerHTML = `
+      💳 <strong>Current Wallet Balance:</strong> ₹${(user.wallet || 0).toLocaleString()}
+    `;
+
+    function updatePaymentMethod() {
+      const method = document.getElementById('paymentMethod').value;
+      const walletDiv = document.getElementById('walletPayment');
+      const addMoneyDiv = document.getElementById('addMoneyPayment');
+
+      if (method === 'wallet') {
+        walletDiv.style.display = 'block';
+        addMoneyDiv.style.display = 'none';
+      } else {
+        walletDiv.style.display = 'none';
+        addMoneyDiv.style.display = 'block';
+        const remaining = Math.max(0, totalBudget - (user.wallet || 0));
+        document.getElementById('addAmount').value = remaining || totalBudget;
+        document.getElementById('addAmountHint').textContent = `Total needed: ₹${totalBudget.toLocaleString()} | Your balance: ₹${(user.wallet || 0).toLocaleString()} | Remaining: ₹${remaining.toLocaleString()}`;
+      }
+    }
+
+    function payFromWallet() {
+      const userBalance = user.wallet || 0;
+      if (userBalance < totalBudget) {
+        document.getElementById('paymentMessage').innerHTML = `<p class="error-msg">❌ Insufficient balance! You need ₹${(totalBudget - userBalance).toLocaleString()} more.</p>`;
+        return;
+      }
+
+      // Process payment
+      const updatedUser = { ...user, wallet: userBalance - totalBudget };
+      const allUsers = DB.getAllUsers();
+      const idx = allUsers.findIndex(u => String(u.id) === String(user.id));
+      if (idx !== -1) {
+        allUsers[idx] = updatedUser;
+        DB.setItem('users', allUsers);
+      }
+
+      // Record transaction
+      const tx = DB.getItem('transactions') || [];
+      tx.push({
+        id: Date.now(),
+        type: 'booking-payment',
+        from: user.id,
+        to: 'admin',
+        amount: totalBudget,
+        bookingId: booking.id,
+        note: `Payment for ${booking.bride} & ${booking.groom} booking`,
+        date: new Date().toISOString()
+      });
+      DB.setItem('transactions', tx);
+
+      document.getElementById('paymentMessage').innerHTML = `
+        <p class="success-msg">✅ Payment successful! ₹${totalBudget.toLocaleString()} deducted from your wallet.</p>
+      `;
+      
+      // Clear current booking and redirect
+      localStorage.removeItem('currentBooking');
+      setTimeout(() => {
+        alert('Booking payment completed successfully!');
+        window.location.href = 'index.html';
+      }, 2000);
+    }
+
+    function addMoneyAndPay() {
+      const addAmount = parseInt(document.getElementById('addAmount').value) || 0;
+      if (addAmount <= 0) {
+        document.getElementById('paymentMessage').innerHTML = `<p class="error-msg">❌ Please enter a valid amount.</p>`;
+        return;
+      }
+
+      // Add money to wallet first
+      const newBalance = (user.wallet || 0) + addAmount;
+      const allUsers = DB.getAllUsers();
+      const idx = allUsers.findIndex(u => String(u.id) === String(user.id));
+      if (idx !== -1) {
+        allUsers[idx].wallet = newBalance;
+        DB.setItem('users', allUsers);
+      }
+
+      // Then deduct for booking
+      const finalBalance = newBalance - totalBudget;
+      if (idx !== -1) {
+        allUsers[idx].wallet = finalBalance;
+        DB.setItem('users', allUsers);
+      }
+
+      // Record transactions
+      const tx = DB.getItem('transactions') || [];
+      // Record top-up as incoming from system -> user
+      tx.push({
+        id: Date.now(),
+        type: 'wallet-topup',
+        from: 'system',
+        to: user.id,
+        amount: addAmount,
+        note: 'Added funds for booking',
+        date: new Date().toISOString()
+      });
+      tx.push({
+        id: Date.now() + 1,
+        type: 'booking-payment',
+        from: user.id,
+        to: 'admin',
+        amount: totalBudget,
+        bookingId: booking.id,
+        note: `Payment for ${booking.bride} & ${booking.groom} booking`,
+        date: new Date().toISOString()
+      });
+      DB.setItem('transactions', tx);
+
+      document.getElementById('paymentMessage').innerHTML = `
+        <p class="success-msg">✅ Added ₹${addAmount.toLocaleString()} to wallet and paid ₹${totalBudget.toLocaleString()} for booking!</p>
+      `;
+
+      localStorage.removeItem('currentBooking');
+      setTimeout(() => {
+        alert('Booking payment completed successfully!');
+        window.location.href = 'index.html';
+      }, 2000);
+    }
+
+    function goBackToBooking() {
+      localStorage.removeItem('currentBooking');
+      window.location.href = 'booking.html';
+    }
+
+    function pageLogout() {
+      if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('currentBooking');
+        window.location.href = 'login.html';
+      }
+    }
+
+    // Initialize
+    updatePaymentMethod();
+  </script>
+</body>
+</html>

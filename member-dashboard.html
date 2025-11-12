@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Member Dashboard - Bharat's Wedding Management</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .member-header { display: flex; justify-content: space-between; align-items: center; }
+    .wallet-section { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+    .wallet-balance { font-size: 2em; font-weight: bold; }
+    .wallet-actions { margin-top: 10px; }
+    .wallet-actions a, .wallet-actions button { background: white; color: #667eea; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px; text-decoration: none; font-weight: bold; }
+    .transaction-history { max-height: 300px; overflow-y: auto; }
+    .transaction-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+    .transaction-item.deposit { color: green; }
+    .transaction-item.payment { color: red; }
+    .assignment-card { background: #f5f5f5; padding: 15px; border-left: 4px solid #667eea; margin-bottom: 10px; border-radius: 5px; }
+    .assignment-date { color: #999; font-size: 0.9em; }
+    .status-badge { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; }
+    .status-badge.pending { background: #fff3cd; color: #856404; }
+    .status-badge.completed { background: #d4edda; color: #155724; }
+    .logout-btn { position: absolute; right: 20px; top: 18px; background: #ff6b6b; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; font-weight: bold; }
+    .logout-btn:hover { background: #ff5252; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Member Dashboard</h1>
+    <a href="#" class="logout-btn" onclick="logout(); return false;">Logout</a>
+  </header>
+
+  <section style="max-width: 1000px; margin: 0 auto; padding: 20px;">
+    <div class="member-header">
+      <h2 id="memberName">Loading...</h2>
+    </div>
+
+    <!-- Wallet Section -->
+    <div class="wallet-section">
+      <div>Wallet Balance</div>
+      <div class="wallet-balance" id="walletBalance">₹0</div>
+      <div class="wallet-actions">
+        <a href="payments.html">💰 Add Funds</a>
+        <a href="#" onclick="showTransactionHistory(); return false;">📊 Transaction History</a>
+      </div>
+    </div>
+
+    <!-- Transaction History Modal -->
+    <div id="transactionModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000;">
+      <div style="background: white; width: 90%; max-width: 600px; margin: 50px auto; padding: 20px; border-radius: 10px;">
+        <h3>Transaction History</h3>
+        <div class="transaction-history" id="transactionList"></div>
+        <button onclick="closeTransactionHistory()" style="margin-top: 10px; padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Close</button>
+      </div>
+    </div>
+
+    <!-- Assignments Section -->
+    <div class="card">
+      <h2>Your Assigned Work</h2>
+      <div id="assignmentsList">Loading assignments...</div>
+    </div>
+
+    <!-- Work Summary Section -->
+    <div class="card" style="margin-top: 20px;">
+      <h2>Work Summary</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 2em; font-weight: bold; color: #1976d2;" id="totalAssignments">0</div>
+          <div style="color: #666;">Total Assignments</div>
+        </div>
+        <div style="background: #f3e5f5; padding: 15px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 2em; font-weight: bold; color: #7b1fa2;" id="completedAssignments">0</div>
+          <div style="color: #666;">Completed</div>
+        </div>
+        <div style="background: #fff3e0; padding: 15px; border-radius: 8px; text-align: center;">
+          <div style="font-size: 2em; font-weight: bold; color: #f57c00;" id="pendingAssignments">0</div>
+          <div style="color: #666;">Pending</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="js/db.js"></script>
+  <script>
+    // Check if member is logged in
+    const cur = DB.getCurrentUser();
+    if (!cur) {
+      window.location.href = 'login.html';
+    }
+
+    // Get current member user object
+    const users = DB.getAllUsers();
+    const member = users.find(u => String(u.id) === String(cur.id));
+    
+    if (!member) {
+      window.location.href = 'login.html';
+    }
+
+    // Display member info
+    document.getElementById('memberName').textContent = `Welcome, ${member.name}`;
+    document.getElementById('walletBalance').textContent = `₹${(member.wallet || 0).toLocaleString()}`;
+
+    // If member is not approved yet, show a notice and disable management actions
+    if (member.role === 'member' && !member.approved) {
+      const section = document.querySelector('section');
+      if (section) {
+        const notice = document.createElement('div');
+        notice.className = 'card';
+        notice.innerHTML = `<h2>Pending Approval</h2>
+          <p>Your account is awaiting admin approval to manage events. Requested salary: ₹${(member.requestedSalary||0).toLocaleString()}.</p>
+          <p>Please wait for an admin to <strong>approve</strong> your account. You will receive access to assignments and wallet management once approved.</p>`;
+        section.insertBefore(notice, section.firstChild);
+      }
+
+      // Hide wallet and assignments until approved
+      document.querySelector('.wallet-section').style.display = 'none';
+      document.getElementById('assignmentsList').innerHTML = '<p>Account pending approval — no assignments available.</p>';
+      document.getElementById('totalAssignments').textContent = '0';
+      document.getElementById('completedAssignments').textContent = '0';
+      document.getElementById('pendingAssignments').textContent = '0';
+      // stop further initialization
+      return;
+    }
+
+    // Load and display assignments
+    function loadAssignments() {
+      const assignments = DB.getAllAssignments() || [];
+      const bookings = DB.getAllBookings() || [];
+
+      // Filter assignments for this member
+      const memberAssignments = assignments.filter(a => {
+        return String(a.teamMemberId) === String(member.id) || 
+               String(a.memberId) === String(member.id) ||
+               (a.memberName || '').toLowerCase() === (member.name || '').toLowerCase();
+      });
+
+      // Count stats
+      let completed = 0, pending = 0;
+      const assignmentHTML = memberAssignments.map(assignment => {
+        const booking = bookings.find(b => String(b.id) === String(assignment.bookingId));
+        const status = assignment.status || 'pending';
+        if (status === 'completed') completed++;
+        else pending++;
+
+        return `
+          <div class="assignment-card">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+              <div>
+                <h4>${assignment.eventType || 'Event'}</h4>
+                <p><strong>Booking:</strong> ${assignment.bookingName || 'N/A'}</p>
+                <p class="assignment-date"><strong>Date:</strong> ${assignment.date ? new Date(assignment.date).toLocaleDateString() : 'N/A'}</p>
+                <p><strong>Time:</strong> ${assignment.date ? new Date(assignment.date).toLocaleTimeString() : 'N/A'}</p>
+              </div>
+              <span class="status-badge ${status}">${status.toUpperCase()}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('assignmentsList').innerHTML = assignmentHTML || '<p>No assignments yet</p>';
+      document.getElementById('totalAssignments').textContent = memberAssignments.length;
+      document.getElementById('completedAssignments').textContent = completed;
+      document.getElementById('pendingAssignments').textContent = pending;
+    }
+
+    // Show transaction history
+    function showTransactionHistory() {
+      const transactions = DB.getTransactions() || [];
+      const memberTx = transactions.filter(t => {
+        return String(t.to) === String(member.id) || String(t.from) === String(member.id);
+      });
+
+      const txHTML = memberTx.map(tx => {
+        const isReceived = String(tx.to) === String(member.id);
+        const amount = `₹${(tx.amount || 0).toLocaleString()}`;
+        const type = isReceived ? 'deposit' : 'payment';
+        const label = isReceived ? `Received: ${amount}` : `Paid: ${amount}`;
+        
+        return `
+          <div class="transaction-item ${type}">
+            <span>${label}</span>
+            <span style="font-size: 0.9em; color: #999;">${new Date(tx.date).toLocaleDateString()}</span>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('transactionList').innerHTML = txHTML || '<p>No transactions yet</p>';
+      document.getElementById('transactionModal').style.display = 'block';
+    }
+
+    function closeTransactionHistory() {
+      document.getElementById('transactionModal').style.display = 'none';
+    }
+
+    function logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        DB.logout();
+        window.location.href = 'login.html';
+      }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadAssignments();
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('transactionModal').addEventListener('click', function(e) {
+      if (e.target === this) closeTransactionHistory();
+    });
+  </script>
+</body>
+</html>

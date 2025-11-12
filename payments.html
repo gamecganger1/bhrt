@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payments - Bharat's Wedding Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <script>
+    // Redirect unauthenticated users to login
+    (function(){
+      const cur = JSON.parse(localStorage.getItem('currentUser')) || null;
+      if (!cur) window.location.href = 'login.html';
+    })();
+  </script>
+  <header>
+    <h1>Payments</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="member-dashboard.html">Dashboard</a>
+      <a href="#" onclick="pageLogout(); return false;" style="color: red; font-weight: bold; margin-left: auto;">Logout</a>
+    </nav>
+  </header>
+
+  <section>
+    <div class="card">
+      <h2>Your Wallet</h2>
+      <div id="walletInfo">Loading...</div>
+      <form id="addFundsForm">
+        <label>Amount to add (₹)</label>
+        <input type="number" id="addAmount" min="1" required>
+        <button type="submit">Add Funds</button>
+      </form>
+      <hr>
+      <h3>Pay to Admin</h3>
+      <form id="payAdminForm">
+        <label>Amount (₹)</label>
+        <input type="number" id="payAmount" min="1" required>
+        <button type="submit">Pay Admin</button>
+      </form>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <h2>Transactions</h2>
+      <div id="txList">Loading...</div>
+    </div>
+  </section>
+
+  <script src="js/db.js"></script>
+  <script>
+    function loadWallet() {
+      const cur = DB.getCurrentUser();
+      if (!cur) {
+        document.getElementById('walletInfo').innerHTML = 'Please <a href="user-login.html">login</a> to manage payments.';
+        document.getElementById('addFundsForm').style.display = 'none';
+        document.getElementById('payAdminForm').style.display = 'none';
+        return;
+      }
+      const users = DB.getAllUsers();
+      const user = users.find(u => String(u.id) === String(cur.id));
+      document.getElementById('walletInfo').innerHTML = `Balance: ₹${(user.wallet||0).toLocaleString()}`;
+    }
+
+    function loadTx() {
+      const tx = DB.getTransactions().slice().reverse();
+      const cur = DB.getCurrentUser();
+      if (tx.length === 0) {
+        document.getElementById('txList').innerHTML = '<p>No transactions</p>';
+        return;
+      }
+      
+      document.getElementById('txList').innerHTML = tx.map(t => {
+        // Determine if incoming or outgoing for this user
+        const isIncoming = (t.type === 'deposit' || t.type === 'wallet-topup') || (String(t.to) === String(cur.id) && t.type !== 'user->admin');
+        const sign = isIncoming ? '+' : '-';
+        const color = isIncoming ? '#4caf50' : '#d32f2f';
+        let label = '';
+        if (t.type === 'deposit' || t.type === 'wallet-topup') label = 'Wallet Top-up';
+        else if (t.type === 'user->admin' || t.type === 'booking-payment') label = 'Payment to Admin';
+        else label = t.type;
+        
+        return `
+        <div class="event-card" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong>${label}</strong>
+            <small style="color: #666; display: block; margin-top: 4px;">${new Date(t.date).toLocaleString()}</small>
+          </div>
+          <div style="text-align: right; font-weight: bold; color: ${color};">
+            ${sign} ₹${t.amount.toLocaleString()}
+          </div>
+        </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('addFundsForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const cur = DB.getCurrentUser();
+      if (!cur) return alert('Please login');
+      const amount = Number(document.getElementById('addAmount').value);
+      const res = DB.addFundsToUser(cur.id, amount);
+      if (res.error) return alert(res.error);
+      loadWallet(); loadTx();
+      document.getElementById('addFundsForm').reset();
+      alert('Funds added to your wallet');
+    });
+
+    document.getElementById('payAdminForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const cur = DB.getCurrentUser();
+      if (!cur) return alert('Please login');
+      const amount = Number(document.getElementById('payAmount').value);
+      const res = DB.userPayAdmin(cur.id, amount);
+      if (res.error) return alert(res.error);
+      loadWallet(); loadTx();
+      document.getElementById('payAdminForm').reset();
+      alert('Paid admin successfully');
+    });
+
+    document.addEventListener('DOMContentLoaded', function(){
+      loadWallet(); loadTx();
+    });
+
+    function pageLogout() {
+      if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('currentUser');
+        window.location.href = 'login.html';
+      }
+    }
+  </script>
+</body>
+</html>

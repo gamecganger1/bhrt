@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Login - Bharat's Wedding Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Login</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="user-register.html">Register</a>
+    </nav>
+  </header>
+
+  <section>
+    <form id="loginForm">
+      <label>Email</label>
+      <input type="email" id="email" required>
+      <label>Password</label>
+      <input type="password" id="password" required>
+      <button type="submit">Login</button>
+    </form>
+    <div id="result"></div>
+  </section>
+
+  <script src="js/db.js"></script>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const res = DB.loginUser({ email, password });
+        if (res.error) {
+          document.getElementById('result').textContent = res.error;
+        } else {
+          // Redirect based on role
+          if (res.user.role === 'admin') {
+            window.location.href = 'admin.html';
+          } else if (res.user.role === 'member') {
+            window.location.href = 'member-dashboard.html';
+          } else {
+            window.location.href = 'index.html';
+          }
+        }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Payments - Bharat's Wedding Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <script>
+    // Show notice if not logged in as admin, but don't force redirect
+    (function(){
+      const cur = JSON.parse(localStorage.getItem('currentUser')) || null;
+      if (!cur || cur.role !== 'admin') {
+        // Hide form and show notice
+        const section = document.querySelector('section');
+        if (section) {
+          const notice = document.createElement('div');
+          notice.className = 'card';
+          notice.innerHTML = `<h2>⚠️ Admin access required</h2>
+            <p>You are logged in as: <strong>${cur ? cur.role : 'guest'}</strong></p>
+            <p><a href="login.html">Login with admin account</a> or <a href="#" onclick="DB.logout(); window.location.href='login.html'; return false;" style="color: #d32f2f; font-weight: bold;">switch accounts</a></p>`;
+          section.insertBefore(notice, section.firstChild);
+        }
+        // Hide payment forms
+        document.getElementById('payMemberForm').style.display = 'none';
+      }
+    })();
+  </script>
+  <header>
+    <h1>Admin Payments</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="admin.html">Admin Panel</a>
+      <a href="#" onclick="pageLogout(); return false;" style="color: red; font-weight: bold; margin-left: auto;">Logout</a>
+    </nav>
+  </header>
+
+  <section>
+    <div class="card">
+      <h2>Admin Wallet</h2>
+      <div id="adminWallet">Loading...</div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <h2>Pay Member</h2>
+      <form id="payMemberForm">
+        <label>Select Member</label>
+        <select id="memberSelect"></select>
+        <label>Amount (₹)</label>
+        <input type="number" id="memberAmount" min="1" required>
+        <button type="submit">Pay Member</button>
+      </form>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <h2>Transactions</h2>
+      <div id="txList">Loading...</div>
+    </div>
+  </section>
+
+  <script src="js/db.js"></script>
+  <script>
+    function loadAdmin() {
+      const cur = DB.getCurrentUser();
+      if (!cur || cur.role !== 'admin') {
+        document.getElementById('adminWallet').innerHTML = 'Please <a href="admin-login.html">login as admin</a> to manage payments.';
+        document.getElementById('payMemberForm').style.display = 'none';
+        return;
+      }
+      const users = DB.getAllUsers();
+      const admin = users.find(u => String(u.id) === String(cur.id));
+      document.getElementById('adminWallet').innerHTML = `Balance: ₹${(admin.wallet||0).toLocaleString()}`;
+
+      // load members
+      const members = users.filter(u => u.role === 'member' || u.role === 'user');
+      const sel = document.getElementById('memberSelect');
+      sel.innerHTML = members.map(m => `<option value="${m.id}">${m.name} (₹${(m.wallet||0)})</option>`).join('');
+    }
+
+    function loadTx() {
+      const tx = DB.getTransactions().slice().reverse();
+      const cur = DB.getCurrentUser();
+      if (tx.length === 0) {
+        document.getElementById('txList').innerHTML = '<p>No transactions</p>';
+        return;
+      }
+
+      document.getElementById('txList').innerHTML = tx.map(t => {
+        // Determine transaction label and direction
+        let label = '';
+        const isIncoming = String(t.to) === String(cur.id);
+        const sign = isIncoming ? '+' : '-';
+        const color = isIncoming ? '#4caf50' : '#d32f2f';
+        
+        if (t.type === 'deposit' || t.type === 'wallet-topup') {
+          label = 'Wallet Top-up';
+        } else if (t.type === 'user->admin') {
+          label = 'Payment from User';
+        } else if (t.type === 'admin->member') {
+          label = 'Payment to Member';
+        } else {
+          label = t.type;
+        }
+
+        return `
+        <div class="event-card" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong>${label}</strong>
+            <small style="color: #666; display: block; margin-top: 4px;">${new Date(t.date).toLocaleString()}</small>
+          </div>
+          <div style="text-align: right; font-weight: bold; color: ${color};">
+            ${sign} ₹${t.amount.toLocaleString()}
+          </div>
+        </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('payMemberForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const cur = DB.getCurrentUser();
+      if (!cur || cur.role !== 'admin') return alert('Please login as admin');
+      const memberId = document.getElementById('memberSelect').value;
+      const amount = Number(document.getElementById('memberAmount').value);
+      const res = DB.adminPayMember(cur.id, memberId, amount);
+      if (res.error) return alert(res.error);
+      loadAdmin(); loadTx();
+      document.getElementById('payMemberForm').reset();
+      // redirect member to their dashboard after payment (optional)
+      alert('Paid member successfully');
+    });
+
+    document.addEventListener('DOMContentLoaded', function(){
+      loadAdmin(); loadTx();
+    });
+
+    function pageLogout() {
+      if (confirm('Are you sure you want to logout?')) {
+        localStorage.removeItem('currentUser');
+        window.location.href = 'login.html';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Booking - Bharat's Wedding Management</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    p {
+      color: #666;
+      line-height: 1.6;
+    }
+    .console-box {
+      background: #1e1e1e;
+      color: #00ff00;
+      padding: 15px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .btn {
+      background: #667eea;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+    .btn:hover {
+      background: #5568d3;
+    }
+    .success {
+      color: #4caf50;
+    }
+    .error {
+      color: #f44336;
+    }
+    .warning {
+      color: #ff9800;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🧪 Booking Page Test</h1>
+    <p>This page helps diagnose issues with the booking page. Click the buttons below to run tests.</p>
+    
+    <h3>Instructions:</h3>
+    <ol>
+      <li>First, login as a user on the main app</li>
+      <li>Then open this page</li>
+      <li>Click "Check Setup" to verify initialization</li>
+      <li>Check the console output below</li>
+      <li>Go to booking.html and open DevTools Console (F12) to see full logs</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>Tests</h3>
+    <button class="btn" onclick="checkSetup()">✓ Check Setup</button>
+    <button class="btn" onclick="testCreateEvent()">✓ Test Create Event</button>
+    <button class="btn" onclick="testBudgetPage()">✓ Test Budget Page</button>
+    <button class="btn" onclick="clearConsole()">✗ Clear Console</button>
+  </div>
+
+  <div class="card">
+    <h3>Console Output:</h3>
+    <div class="console-box" id="console"></div>
+  </div>
+
+  <script>
+    const consoleEl = document.getElementById('console');
+    const logs = [];
+
+    function log(msg, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const logMsg = `[${timestamp}] ${msg}`;
+      logs.push(logMsg);
+      consoleEl.textContent += logMsg + '\n';
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function clearConsole() {
+      logs.length = 0;
+      consoleEl.textContent = '';
+      log('Console cleared', 'info');
+    }
+
+    function checkSetup() {
+      log('=== CHECK SETUP ===', 'info');
+      
+      // Check DB
+      if (window.DB) {
+        log('✓ DB is loaded', 'success');
+        log(`  - DESTINATIONS: ${DB.DESTINATIONS ? DB.DESTINATIONS.length + ' venues' : 'not found'}`, 'info');
+        log(`  - MEAL_TYPES: ${DB.MEAL_TYPES ? Object.keys(DB.MEAL_TYPES).length + ' types' : 'not found'}`, 'info');
+        log(`  - MEAL_TIERS: ${DB.MEAL_TIERS ? Object.keys(DB.MEAL_TIERS).length + ' tiers' : 'not found'}`, 'info');
+      } else {
+        log('✗ DB is NOT loaded', 'error');
+      }
+
+      // Check current user
+      const cur = JSON.parse(localStorage.getItem('currentUser'));
+      if (cur) {
+        log(`✓ User is logged in as: ${cur.role}`, 'success');
+      } else {
+        log('✗ No user logged in', 'error');
+      }
+
+      // Check exported functions
+      log('Checking exported functions:', 'info');
+      const funcs = ['createEventEntry', 'recalculateBudget', 'updateMealOptions', 'payBooking', 'deleteBooking'];
+      funcs.forEach(fn => {
+        if (window[fn]) {
+          log(`  ✓ ${fn}`, 'success');
+        } else {
+          log(`  ✗ ${fn} NOT FOUND`, 'error');
+        }
+      });
+    }
+
+    function testCreateEvent() {
+      log('=== TEST CREATE EVENT ===', 'info');
+      
+      if (typeof window.createEventEntry !== 'function') {
+        log('✗ createEventEntry is not available', 'error');
+        return;
+      }
+
+      try {
+        log('Calling window.createEventEntry()...', 'info');
+        window.createEventEntry();
+        log('✓ createEventEntry() executed successfully', 'success');
+        log('Check booking.html to see the new event block', 'warning');
+      } catch (e) {
+        log(`✗ Error: ${e.message}`, 'error');
+      }
+    }
+
+    function testBudgetPage() {
+      log('=== TEST BUDGET PAGE ===', 'info');
+      
+      if (!window.DB || !DB.DESTINATIONS) {
+        log('✗ DB.DESTINATIONS not loaded', 'error');
+        return;
+      }
+
+      log(`Found ${DB.DESTINATIONS.length} destinations:`, 'info');
+      DB.DESTINATIONS.forEach((d, i) => {
+        if (i < 5) log(`  ${i+1}. ${d.name} (${d.city})`, 'info');
+      });
+      log('  ...and more', 'info');
+
+      if (DB.MEAL_TYPES) {
+        log(`Meal types: ${Object.keys(DB.MEAL_TYPES).join(', ')}`, 'success');
+      }
+    }
+
+    // Run initial check on page load
+    window.addEventListener('load', () => {
+      log('Page loaded - you can now run tests', 'warning');
+    });
+  </script>
+</body>
+</html>

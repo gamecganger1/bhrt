@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Calculator - Bharat's Wedding Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Wedding Budget Planner 💰</h1>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="booking.html">Book Event</a>
+            <a href="budget.html" class="active">Budget Calculator</a>
+            <a href="admin.html">Admin Panel</a>
+            <a href="#" onclick="pageLogout(); return false;" style="color: red; font-weight: bold; margin-left: auto;">Logout</a>
+        </nav>
+    </header>
+
+    <section class="budget-planner">
+        <div class="grid" style="grid-template-columns: 2fr 1fr;">
+            <!-- Budget Input Form -->
+            <div class="card">
+                <h2>Wedding Budget Calculator</h2>
+                <form id="budgetForm" class="budget-form">
+                    <div class="form-group">
+                        <label>Event Type:</label>
+                        <select id="eventType" required>
+                            <option value="">Select Event Type</option>
+                            <option value="wedding">Wedding Ceremony</option>
+                            <option value="reception">Reception</option>
+                            <option value="sangeet">Sangeet</option>
+                            <option value="mehendi">Mehendi</option>
+                            <option value="haldi">Haldi</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Venue (choose from list):</label>
+                        <select id="destinationSelect" required>
+                            <option value="">Select a venue...</option>
+                            <option value="1">Green Valley Resort (Agra)</option>
+                            <option value="2">Royal Palace Hotel (Delhi)</option>
+                            <option value="3">Taj Convention Center (Agra)</option>
+                            <option value="4">Marriott Grand (Mumbai)</option>
+                            <option value="5">Lake View Banquet (Udaipur)</option>
+                            <option value="6">Palace of Dreams (Jaipur)</option>
+                            <option value="7">Shimla Hills Resort (Shimla)</option>
+                            <option value="8">Manali Meadows (Manali)</option>
+                            <option value="9">Dharamshala Retreat (Dharamshala)</option>
+                            <option value="10">Udaipur Palace Grounds (Udaipur)</option>
+                            <option value="11">Jaipur Royal Lawn (Jaipur)</option>
+                            <option value="12">Goa Beachside Venue (Goa)</option>
+                            <option value="13">Kerala Backwaters Resort (Kerala)</option>
+                            <option value="14">Rishikesh Riverside (Rishikesh)</option>
+                            <option value="15">Agra Heritage Lawn (Agra)</option>
+                            <option value="16">Nainital Lakeview (Nainital)</option>
+                            <option value="17">Mussoorie Garden Estate (Mussoorie)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Catering:</label>
+                        <label>Meal Type:</label>
+                        <select id="budgetMealType" required>
+                            <option value="">Select meal type</option>
+                        </select>
+                        <label>Sub-Meal:</label>
+                        <select id="subMealSelect">
+                            <option value="">Select sub-meal (optional)</option>
+                        </select>
+                        <label>Meal Tier:</label>
+                        <div id="budgetMealTiers" class="meal-tier-options"></div>
+                        <input type="number" id="expectedGuests" placeholder="Expected Number of Guests" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Decoration:</label>
+                        <input type="number" id="decorationCost" placeholder="Decoration Cost" required>
+                        <select id="decorationType">
+                            <option value="basic">Basic Decoration</option>
+                            <option value="premium">Premium Decoration</option>
+                            <option value="luxury">Luxury Decoration</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Additional Services:</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" id="photography" data-cost="25000"> Photography (₹25,000)</label>
+                            <label><input type="checkbox" id="dj" data-cost="15000"> DJ & Music (₹15,000)</label>
+                            <label><input type="checkbox" id="mehendi" data-cost="10000"> Mehendi Artist (₹10,000)</label>
+                            <label><input type="checkbox" id="choreographer" data-cost="20000"> Choreographer (₹20,000)</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Miscellaneous:</label>
+                        <input type="number" id="miscCost" placeholder="Other Costs">
+                        <input type="text" id="miscDetails" placeholder="Details of other costs">
+                    </div>
+
+                    <button type="submit" id="calculateBtn">Calculate Total Budget</button>
+                </form>
+            </div>
+
+            <!-- Budget Summary -->
+            <div class="card">
+                <h2>Budget Summary</h2>
+                <div id="budgetSummary" class="budget-summary">
+                    <div class="summary-item">
+                        <span>Venue Cost:</span>
+                        <span id="summaryVenue">₹0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Catering Cost:</span>
+                        <span id="summaryCatering">₹0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Decoration:</span>
+                        <span id="summaryDecoration">₹0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Additional Services:</span>
+                        <span id="summaryServices">₹0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Miscellaneous:</span>
+                        <span id="summaryMisc">₹0</span>
+                    </div>
+                    <div class="summary-item total">
+                        <span>Total Budget:</span>
+                        <span id="summaryTotal">₹0</span>
+                    </div>
+                </div>
+
+                <div id="saveBudgetSection" style="display: none;">
+                    <button id="saveBudget" class="save-button">Save Budget Plan</button>
+                    <p class="save-note">This budget plan will be saved for future reference</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saved Budgets -->
+        <div class="card" style="margin-top: 20px;">
+            <h2>Saved Budget Plans</h2>
+            <div id="savedBudgets" class="saved-budgets"></div>
+        </div>
+    </section>
+
+    <script src="js/db.js"></script>
+    <script src="main.js"></script>
+    <script src="js/budget.js"></script>
+</body>
+</html>

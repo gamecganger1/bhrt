@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Register - Bharat's Wedding Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Register</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="user-login.html">Login</a>
+    </nav>
+  </header>
+
+  <section>
+    <form id="registerForm">
+      <label>Name</label>
+      <input type="text" id="name" required>
+      <label>Email</label>
+      <input type="email" id="email" required>
+      <label>Password</label>
+      <input type="password" id="password" required>
+      <label>Role</label>
+      <select id="role">
+        <option value="user">User</option>
+        <option value="member">Member</option>
+      </select>
+      <button type="submit">Register</button>
+    </form>
+    <div id="result"></div>
+  </section>
+
+  <script src="js/db.js"></script>
+  <script>
+    document.getElementById('registerForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const role = document.getElementById('role').value;
+      const res = DB.registerUser({ name, email, password, role });
+      if (res.error) {
+        document.getElementById('result').textContent = res.error;
+      } else {
+        document.getElementById('result').innerHTML = 'Registered successfully. <a href="user-login.html">Login</a>';
+        document.getElementById('registerForm').reset();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Wedding Event - Bharat's Wedding Management</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .event-entry {
+      border: 2px solid #ffb347;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      position: relative;
+      background: #fff5e6;
+    }
+    .remove-event {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #ff4081;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .meal-tier-section {
+      border: 1px solid #ddd;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 5px;
+      background: #f9f9f9;
+    }
+    .meal-details {
+      color: #666;
+      font-size: 0.9em;
+      margin: 5px 0;
+      font-style: italic;
+    }
+    .meal-price {
+      font-weight: bold;
+      color: #d32f2f;
+      margin-top: 5px;
+    }
+    .budget-display {
+      background: #e8f5e9;
+      border-left: 4px solid #4caf50;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .budget-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 6px 0;
+    }
+    .budget-total {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #1b5e20;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 2px solid #4caf50;
+    }
+    .pay-button {
+      background: #4caf50;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .pay-button:hover {
+      background: #388e3c;
+    }
+    .pay-button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    #addMoreEvents {
+      background: #ffb347;
+      margin: 15px 0;
+      padding: 10px 20px;
+    }
+    .booking-card {
+      background: #fff3e0;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #ffb347;
+    }
+    .paid-badge {
+      color: white;
+      background: #4caf50;
+      padding: 5px 10px;
+      border-radius: 3px;
+      font-weight: bold;
+      margin-top: 10px;
+      display: inline-block;
+    }
+    .pending-badge {
+      color: white;
+      background: #ff9800;
+      padding: 5px 10px;
+      border-radius: 3px;
+      font-weight: bold;
+      margin-top: 10px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <script src="js/db.js"></script>
+  <script>
+    // Redirect to login if not authenticated and restrict to users only
+    (function(){
+      const cur = JSON.parse(localStorage.getItem('currentUser')) || null;
+      if (!cur) {
+        window.location.href = 'login.html';
+        return;
+      }
+      // Only regular users can book events
+      if (cur.role !== 'user') {
+        document.body.innerHTML = `
+          <header><h1>Access denied</h1></header>
+          <section style="max-width:800px;margin:40px auto;">
+            <div class="card">
+              <h2>Only registered users can create bookings</h2>
+              <p>Your account role is <strong>${cur.role}</strong>. Please login with a user account to book events.</p>
+              <p><a href="login.html">Go to Login</a></p>
+            </div>
+          </section>`;
+        return;
+      }
+    })();
+  </script>
+  <header>
+    <h1>Book Your Wedding Event 💒</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="booking.html" class="active">Book Event</a>
+      <a href="user-dashboard.html">My Dashboard</a>
+      <a href="budget.html">Budget Planner</a>
+      <a href="admin.html">Admin Panel</a>
+      <a href="#" onclick="userLogout(); return false;" style="color: red; font-weight: bold;">Logout</a>
+    </nav>
+  </header>
+
+  <section style="max-width: 1000px; margin: 20px auto;">
+    <div class="card">
+      <h2>Create New Booking</h2>
+      <form id="bookForm">
+        <label>Bride Name:</label>
+        <input type="text" id="bride" required>
+
+        <label>Groom Name:</label>
+        <input type="text" id="groom" required>
+
+        <label>Mobile Number:</label>
+        <input type="tel" id="mobile" pattern="[0-9]{10}" placeholder="10 digit number" required>
+
+        <div id="eventContainer"></div>
+
+        <button type="button" id="addMoreEvents">+ Add Another Event</button>
+        <button type="submit">Create Booking</button>
+      </form>
+
+      <div id="bookingResult" style="margin-top: 20px;"></div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <h2>Your Bookings</h2>
+      <div id="bookingsList"></div>
+    </div>
+  </section>
+
+  <script src="js/db.js"></script>
+  <script>
+    // Redirect to login if not authenticated and restrict to users only
+    (function(){
+      const cur = JSON.parse(localStorage.getItem('currentUser')) || null;
+      if (!cur) {
+        window.location.href = 'login.html';
+        return;
+      }
+      // Only regular users can book events - show message but do NOT auto-redirect
+      if (cur.role !== 'user') {
+        document.body.innerHTML = `
+          <header><h1>Access Restricted</h1></header>
+          <section style="max-width:800px;margin:40px auto;">
+            <div class="card">
+              <h2>⚠️ Only users can create bookings</h2>
+              <p>You are logged in as: <strong>${cur.role}</strong></p>
+              <p>Please login with a user account to book events, or <a href="#" onclick="DB.logout(); window.location.href='login.html'; return false;" style="color: #d32f2f; font-weight: bold;">switch accounts</a>.</p>
+            </div>
+          </section>`;
+        return;
+      }
+    })();
+  </script>
+  <script src="main.js"></script>
+</body>
+</html>
